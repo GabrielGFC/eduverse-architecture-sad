@@ -1,0 +1,29 @@
+flowchart LR
+    aluno["Aluno"]
+    professor["Professor"]
+    coordenador["Coordenador pedagogico"]
+    admin["Administrador de TI"]
+
+    eduverse["EduVerse<br/>Plataforma de aprendizado adaptativo"]
+    moodle["LMS institucional<br/>Moodle"]
+    ia["Motor de recomendacao<br/>e IA"]
+    conteudo["Repositorio<br/>de conteudo"]
+    notificacao["Servico de<br/>notificacao"]
+
+    aluno -->|"estuda e recebe feedback"| eduverse
+    professor -->|"publica conteudo e acompanha turmas"| eduverse
+    coordenador -->|"analisa indicadores pedagogicos"| eduverse
+    admin -->|"configura integracoes e operacao"| eduverse
+
+    eduverse <-->|"sincroniza turmas, matriculas e progresso"| moodle
+    eduverse -->|"solicita recomendacoes"| ia
+    eduverse <-->|"consulta materiais didaticos"| conteudo
+    eduverse -->|"envia lembretes e alertas"| notificacao
+
+    classDef actor fill:#fff4dd,stroke:#9a5a00,color:#111111;
+    classDef system fill:#e8f0ff,stroke:#1f4f9b,color:#111111;
+    classDef external fill:#edf7ed,stroke:#2d6b2d,color:#111111;
+
+    class aluno,professor,coordenador,admin actor;
+    class eduverse system;
+    class moodle,ia,conteudo,notificacao external;

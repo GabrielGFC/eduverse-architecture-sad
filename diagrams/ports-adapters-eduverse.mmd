@@ -1,0 +1,44 @@
+flowchart LR
+    ui["Portal Web / Controllers"]
+    lmsin["API LMS / Webhooks"]
+    jobs["Jobs agendados"]
+
+    subgraph domain["Dominio EduVerse"]
+        usecases["Use Cases<br/>AdaptiveLearning<br/>Assessment<br/>ProgressTracking"]
+        entities["Entities<br/>Aluno<br/>TrilhaAdaptativa<br/>Progresso<br/>Avaliacao"]
+    end
+
+    subgraph ports["Driven Ports definidos pelo dominio"]
+        lmsport["LmsSyncPort"]
+        recport["RecommendationPort"]
+        contentport["ContentRepositoryPort"]
+        notifport["NotificationPort"]
+    end
+
+    moodle["MoodleAdapter"]
+    ia["AiRecommendationAdapter"]
+    content["PostgresContentAdapter"]
+    notif["NotificationAdapter"]
+
+    ui -->|"driving adapter"| usecases
+    lmsin -->|"driving adapter"| usecases
+    jobs -->|"driving adapter"| usecases
+    usecases --> entities
+
+    usecases --> lmsport
+    usecases --> recport
+    usecases --> contentport
+    usecases --> notifport
+
+    lmsport --> moodle
+    recport --> ia
+    contentport --> content
+    notifport --> notif
+
+    classDef adapter fill:#fff4dd,stroke:#9a5a00,color:#111111;
+    classDef domain fill:#e8f0ff,stroke:#1f4f9b,color:#111111;
+    classDef port fill:#edf7ed,stroke:#2d6b2d,color:#111111;
+
+    class ui,lmsin,jobs,moodle,ia,content,notif adapter;
+    class usecases,entities domain;
+    class lmsport,recport,contentport,notifport port;

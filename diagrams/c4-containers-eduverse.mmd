@@ -1,0 +1,40 @@
+flowchart LR
+    aluno["Aluno"]
+    professor["Professor"]
+    coordenador["Coordenador pedagogico"]
+    admin["Administrador de TI"]
+
+    moodle["LMS institucional<br/>Moodle"]
+    ia["Motor de recomendacao<br/>e IA"]
+    conteudo["Repositorio<br/>de conteudo"]
+    notificacao["Servico de<br/>notificacao"]
+
+    subgraph eduverse["Sistema EduVerse"]
+        web["Portal Web responsivo<br/>Interface para estudo e gestao"]
+        api["Backend de aplicacao<br/>Monolito modular com arquitetura hexagonal"]
+        db[("PostgreSQL<br/>Perfis, trilhas, progresso e auditoria")]
+        cache[("Redis<br/>Cache de recomendacoes")]
+    end
+
+    aluno --> web
+    professor --> web
+    coordenador --> web
+    admin --> web
+
+    web -->|"HTTPS/JSON"| api
+    api -->|"persistencia transacional"| db
+    api <-->|"cache de recomendacoes e sessoes"| cache
+    api <-->|"sincroniza matriculas, turmas e notas"| moodle
+    api -->|"consulta recomendacoes"| ia
+    api <-->|"obtem materiais didaticos"| conteudo
+    api -->|"dispara comunicacoes"| notificacao
+
+    classDef actor fill:#fff4dd,stroke:#9a5a00,color:#111111;
+    classDef app fill:#e8f0ff,stroke:#1f4f9b,color:#111111;
+    classDef data fill:#f4ecff,stroke:#6741a8,color:#111111;
+    classDef external fill:#edf7ed,stroke:#2d6b2d,color:#111111;
+
+    class aluno,professor,coordenador,admin actor;
+    class web,api app;
+    class db,cache data;
+    class moodle,ia,conteudo,notificacao external;
