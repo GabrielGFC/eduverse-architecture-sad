@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    actor Aluno
+    participant CF as CloudFront + WAF
+    participant GW as API Gateway
+    participant ID as identity-service
+    participant AS as assessment-service
+    participant DB as RDS Postgres
+    participant EB as EventBridge
+    participant INT as integrations-service (Lambda)
+    participant NOT as Provedor Notificacao
+    participant AL as adaptive-learning-service
+
+    Aluno->>CF: POST /assessment/{id}/submit (JWT)
+    CF->>GW: encaminha
+    GW->>ID: valida JWT
+    ID-->>GW: claims OK
+    GW->>AS: POST submit (correlationId=X)
+
+    rect rgb(232,240,255)
+    note over AS,DB: Transacao + Outbox
+    AS->>DB: INSERT submission + INSERT outbox(AssessmentSubmitted)
+    DB-->>AS: commit
+    end
+
+    AS-->>GW: 202 Accepted {submissionId}
+    GW-->>Aluno: 202 Accepted ("recebido, corrigindo")
+
+    rect rgb(255,233,214)
+    note over AS,EB: Publicacao assincrona via Outbox poller
+    AS->>EB: PutEvents (AssessmentSubmitted, cid=X)
+    end
+
+    par Correcao
+        EB->>INT: trigger Lambda (correcao IA)
+        INT-->>EB: publica AssessmentScored
+    and Notificacao
+        EB->>INT: trigger Lambda (notificar aluno)
+        INT->>NOT: push/email
+    end
+
+    EB->>AL: AssessmentScored
+    AL->>DB: UPDATE progresso, recomputa trilha

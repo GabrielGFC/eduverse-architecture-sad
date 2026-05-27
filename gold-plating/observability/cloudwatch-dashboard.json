@@ -1,0 +1,116 @@
+{
+  "_comment": "EduVerse Fase 3 - Dashboard CloudWatch principal. Importar via: aws cloudwatch put-dashboard --dashboard-name eduverse-prod --dashboard-body file://cloudwatch-dashboard.json",
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0, "y": 0, "width": 24, "height": 1,
+      "properties": { "markdown": "# EduVerse - Visao Operacional (Fase 3)\nDashboard alinhado aos ADRs 0001/0002/0003. Metricas que importam para SLO." }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 1, "width": 8, "height": 6,
+      "properties": {
+        "title": "API Gateway - Latencia p50/p95/p99",
+        "view": "timeSeries",
+        "stat": "p95",
+        "metrics": [
+          ["AWS/ApiGateway", "Latency", "ApiName", "eduverse-prod", { "stat": "p50", "label": "p50" }],
+          ["...", { "stat": "p95", "label": "p95" }],
+          ["...", { "stat": "p99", "label": "p99" }]
+        ],
+        "yAxis": { "left": { "label": "ms", "showUnits": false } },
+        "annotations": {
+          "horizontal": [{ "label": "SLO p95 = 500ms", "value": 500 }]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8, "y": 1, "width": 8, "height": 6,
+      "properties": {
+        "title": "Fargate - CPU por servico",
+        "view": "timeSeries",
+        "metrics": [
+          ["AWS/ECS", "CPUUtilization", "ServiceName", "identity-service", "ClusterName", "eduverse-prod"],
+          ["...", "ServiceName", "adaptive-learning-service", "."],
+          ["...", "ServiceName", "assessment-service", "."]
+        ],
+        "annotations": {
+          "horizontal": [{ "label": "Target autoscaling 60%", "value": 60 }]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16, "y": 1, "width": 8, "height": 6,
+      "properties": {
+        "title": "Lambda integrations - Erros + Throttles + Duration p95",
+        "view": "timeSeries",
+        "metrics": [
+          ["AWS/Lambda", "Errors", "FunctionName", "eduverse-integrations-prod", { "label": "Erros" }],
+          ["...", "Throttles", ".", { "label": "Throttles" }],
+          ["...", "Duration", ".", { "stat": "p95", "label": "Duration p95 (ms)", "yAxis": "right" }]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 7, "width": 12, "height": 6,
+      "properties": {
+        "title": "SQS - Profundidade de fila e idade da mensagem mais antiga",
+        "view": "timeSeries",
+        "metrics": [
+          ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "eduverse-recommendation-jobs-prod"],
+          ["...", "QueueName", "eduverse-moodle-sync-prod"],
+          ["AWS/SQS", "ApproximateAgeOfOldestMessage", "QueueName", "eduverse-recommendation-jobs-prod", { "yAxis": "right" }],
+          ["...", "QueueName", "eduverse-moodle-sync-prod", { "yAxis": "right" }]
+        ],
+        "annotations": {
+          "horizontal": [{ "label": "SLO idade max = 15min", "value": 900, "yAxis": "right" }]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12, "y": 7, "width": 12, "height": 6,
+      "properties": {
+        "title": "Circuit Breaker - Estado por dependencia (custom metrics)",
+        "view": "timeSeries",
+        "stat": "Maximum",
+        "metrics": [
+          ["EduVerse/Resilience", "CircuitBreakerState", "Service", "adaptive-learning-service", "Dependency", "ai-recommender", { "label": "AI" }],
+          ["...", "Dependency", "moodle", ".", { "label": "Moodle" }],
+          ["...", "Dependency", "content-repo", ".", { "label": "Content" }]
+        ],
+        "yAxis": { "left": { "label": "0=closed 1=half 2=open", "min": 0, "max": 2 } }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 13, "width": 12, "height": 6,
+      "properties": {
+        "title": "RDS PostgreSQL - CPU, Conexoes, FreeStorage",
+        "view": "timeSeries",
+        "metrics": [
+          ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "eduverse-prod"],
+          ["...", "DatabaseConnections", ".", { "yAxis": "right" }],
+          ["...", "FreeStorageSpace", ".", { "yAxis": "right", "stat": "Minimum" }]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12, "y": 13, "width": 12, "height": 6,
+      "properties": {
+        "title": "EventBridge - Eventos publicados / DLQ",
+        "view": "timeSeries",
+        "metrics": [
+          ["AWS/Events", "MatchedEvents", "EventBusName", "eduverse-prod"],
+          ["...", "FailedInvocations", ".", { "color": "#d62728" }],
+          ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "eduverse-recommendation-dlq-prod", { "label": "DLQ recommendation", "yAxis": "right" }],
+          ["...", "QueueName", "eduverse-moodle-sync-dlq-prod", { "label": "DLQ moodle", "yAxis": "right" }]
+        ]
+      }
+    }
+  ]
+}

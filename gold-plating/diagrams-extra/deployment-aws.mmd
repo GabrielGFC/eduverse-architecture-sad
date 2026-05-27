@@ -1,0 +1,98 @@
+flowchart TB
+    subgraph internet["Internet"]
+        users["Usuarios (Web/Mobile)"]
+    end
+
+    subgraph aws["AWS us-east-1"]
+        subgraph edge["Edge"]
+            cf["CloudFront<br/>(WAF + cache estatico)"]
+            gw["API Gateway<br/>(rate limit + JWT authorizer)"]
+        end
+
+        subgraph vpc["VPC 10.20.0.0/16"]
+            subgraph publica["Subnets publicas (3 AZ)"]
+                nat["NAT Gateway"]
+                alb["Application Load Balancer"]
+            end
+
+            subgraph privada["Subnets privadas (3 AZ)"]
+                subgraph ecs["ECS Fargate Cluster"]
+                    id1["identity x2"]
+                    al1["adaptive-learning x2-20"]
+                    as1["assessment x2-30"]
+                end
+                lambda["Lambda<br/>integrations-service<br/>(reserved=50)"]
+                redis[("ElastiCache Redis<br/>Multi-AZ")]
+            end
+
+            subgraph db["Subnets de banco (3 AZ)"]
+                rds[("RDS PostgreSQL<br/>Multi-AZ primary+standby")]
+            end
+        end
+
+        subgraph async["Mensageria gerenciada"]
+            eb["EventBridge bus"]
+            sqs_rec["SQS recommendation-jobs"]
+            sqs_moo["SQS moodle-sync"]
+            dlq["SQS DLQs"]
+        end
+
+        subgraph obs["Observabilidade"]
+            cw["CloudWatch Logs+Metrics"]
+            xray["X-Ray Tracing"]
+            sns["SNS oncall"]
+        end
+
+        subgraph state["State serverless"]
+            ddb[("DynamoDB jobs")]
+        end
+    end
+
+    subgraph extern["Sistemas externos"]
+        moodle["Moodle institucional"]
+        ia["Motor IA"]
+        notif["Provedor Notificacao"]
+        repo["Repositorio Conteudo"]
+    end
+
+    users --> cf --> gw --> alb
+    alb --> id1
+    alb --> al1
+    alb --> as1
+    al1 --> redis
+    al1 --> rds
+    as1 --> rds
+    id1 --> rds
+
+    al1 --> eb
+    as1 --> eb
+    al1 --> sqs_rec --> lambda
+    lambda --> ddb
+    eb --> lambda
+    sqs_rec -.falha 5x.-> dlq
+    sqs_moo -.falha 5x.-> dlq
+
+    lambda --> moodle
+    lambda --> ia
+    lambda --> notif
+    lambda --> repo
+
+    id1 -.logs+trace.-> cw
+    al1 -.logs+trace.-> cw
+    as1 -.logs+trace.-> cw
+    lambda -.logs+trace.-> xray
+    cw --> sns
+
+    classDef edge fill:#dde8ff,stroke:#1f4f9b;
+    classDef svc fill:#e8f0ff,stroke:#1f4f9b;
+    classDef data fill:#f4ecff,stroke:#6741a8;
+    classDef async fill:#ffe9d6,stroke:#a64b00;
+    classDef ext fill:#edf7ed,stroke:#2d6b2d;
+    classDef obs fill:#fff4dd,stroke:#9a5a00;
+
+    class cf,gw,alb edge;
+    class id1,al1,as1,lambda svc;
+    class rds,redis,ddb data;
+    class eb,sqs_rec,sqs_moo,dlq async;
+    class moodle,ia,notif,repo ext;
+    class cw,xray,sns obs;

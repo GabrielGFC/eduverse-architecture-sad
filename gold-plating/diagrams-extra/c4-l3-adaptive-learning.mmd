@@ -1,0 +1,77 @@
+flowchart TB
+    subgraph svc["adaptive-learning-service (C4 Nivel 3 - Components)"]
+        direction TB
+
+        subgraph driving["Driving (entrada)"]
+            ctrl["LearningController<br/>(REST)"]
+            event_in["EventConsumer<br/>(SQS/EventBridge)"]
+        end
+
+        subgraph app["Application (Use Cases)"]
+            uc_path["BuildAdaptivePathUseCase"]
+            uc_rec["RequestRecommendationUseCase"]
+            uc_prog["TrackProgressUseCase"]
+        end
+
+        subgraph domain["Domain (puro)"]
+            ent_aluno["Aluno"]
+            ent_trilha["TrilhaAdaptativa"]
+            ent_prog["Progresso"]
+            dom_svc["RecommendationPolicy"]
+        end
+
+        subgraph ports["Driven Ports (interfaces)"]
+            p_rec["RecommendationPort"]
+            p_lms["LmsSyncPort"]
+            p_repo["ProgressRepositoryPort"]
+            p_cache["CachePort"]
+            p_pub["EventPublisherPort"]
+        end
+
+        subgraph adapters["Adapters (infra)"]
+            a_rec["SqsRecommendationAdapter<br/>(enfileira jobs)"]
+            a_lms["MoodleHttpAdapter"]
+            a_repo["JpaProgressAdapter"]
+            a_cache["RedisCacheAdapter"]
+            a_pub["EventBridgePublisher"]
+        end
+
+        resi["Resilience4j<br/>(Breaker + Bulkhead + Retry)"]
+    end
+
+    ctrl --> uc_path
+    ctrl --> uc_prog
+    event_in --> uc_rec
+
+    uc_path --> dom_svc
+    uc_path --> p_repo
+    uc_path --> p_cache
+    uc_path --> p_rec
+    uc_rec --> p_pub
+    uc_prog --> p_repo
+    uc_prog --> p_lms
+
+    dom_svc --> ent_aluno
+    dom_svc --> ent_trilha
+    dom_svc --> ent_prog
+
+    p_rec -.implementa.- a_rec
+    p_lms -.implementa.- a_lms
+    p_repo -.implementa.- a_repo
+    p_cache -.implementa.- a_cache
+    p_pub -.implementa.- a_pub
+
+    a_rec --- resi
+    a_lms --- resi
+
+    classDef d fill:#e8f0ff,stroke:#1f4f9b;
+    classDef u fill:#fff4dd,stroke:#9a5a00;
+    classDef do fill:#f4ecff,stroke:#6741a8;
+    classDef p fill:#edf7ed,stroke:#2d6b2d;
+    classDef a fill:#ffe9d6,stroke:#a64b00;
+
+    class ctrl,event_in d;
+    class uc_path,uc_rec,uc_prog u;
+    class ent_aluno,ent_trilha,ent_prog,dom_svc do;
+    class p_rec,p_lms,p_repo,p_cache,p_pub p;
+    class a_rec,a_lms,a_repo,a_cache,a_pub a;

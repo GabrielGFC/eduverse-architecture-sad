@@ -1,0 +1,44 @@
+sequenceDiagram
+    autonumber
+    actor Aluno
+    participant AL as adaptive-learning-service
+    participant DB as RDS Postgres
+    participant CACHE as ElastiCache Redis
+    participant EB as EventBridge
+    participant Q as SQS recommendation-jobs
+    participant INT as integrations-service (Lambda)
+    participant IA as Motor IA externo
+    participant DLQ as SQS DLQ
+
+    Aluno->>AL: GET /trilha/atual
+    AL->>CACHE: get(recommendations:alunoId)
+
+    alt cache hit
+        CACHE-->>AL: trilha cacheada
+        AL-->>Aluno: 200 OK (trilha)
+    else cache miss
+        AL->>DB: SELECT progresso
+        AL-->>Aluno: 200 OK (trilha padrao + flag "atualizando")
+        AL->>Q: enqueue RecommendationJob(alunoId, cid=Y)
+    end
+
+    rect rgb(255,233,214)
+    note over Q,INT: Processamento assincrono
+    Q->>INT: trigger batch
+    INT->>IA: POST /recommend(progresso)
+
+    alt IA responde em < 8s
+        IA-->>INT: recomendacoes
+        INT->>EB: publica RecommendationReady
+        EB->>AL: handler atualiza cache
+        AL->>CACHE: SET recommendations:alunoId TTL=1h
+    else IA falha ou timeout
+        IA-->>INT: erro/timeout
+        note over INT: retry 3x com backoff + jitter
+        INT--xQ: nao apaga mensagem
+        Q->>DLQ: apos 5 tentativas
+        note over DLQ: alarme dispara, runbook secao 3
+    end
+    end
+
+    note over Aluno,AL: Proxima visita do aluno encontra recomendacao no cache (eventually consistent)
